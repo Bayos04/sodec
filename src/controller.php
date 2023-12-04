@@ -26,7 +26,11 @@ function throwError(int $code,$title, $message = "", array $option = [])
 }
 
 function errorPage(){
-	require "src/View/404.php";
+	if (isset($_SESSION["id"])) :
+		require "src/View/404.php";
+	else :
+		header("location:login");
+	endif;
 }
 
 function writeBody($data, int $code = 200, string $message = "", string $debug="") : false|string
@@ -69,7 +73,7 @@ function registerController(App $app, string $controller) : void
 
 	$attributes = $class->getAttributes(Route::class);
 	$prefix = "/api/";
-	if ($controller == PageController::class) $prefix = "/";
+	if ($controller == PageController::class) $prefix = "";
 	if (!empty($attributes)) {
 		$prefix = $prefix . $attributes[0]->newInstance()->getPath();
 	}
@@ -85,6 +89,11 @@ function registerController(App $app, string $controller) : void
 			/** @var Route $r */
 			$r = $route->newInstance();
 			$httpMethod = $r->getMethod();
+			if ($_SERVER["REQUEST_URI"] == $r->getPath()){
+				if ($r->getGuard() == "LOGGED" && !isset($_SESSION["id"])) header("location:login");
+				if ($r->getGuard() == "NONE" && isset($_SESSION["id"])) header("location:home");
+			}
+
 			$app->$httpMethod($prefix . $r->getPath(), function (Request $request, Response $response, array $args) use ($method, $controller) {
 				$body = (array) json_decode($request->getBody()->getContents());
 				$params = [];
